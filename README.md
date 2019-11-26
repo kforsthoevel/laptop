@@ -39,6 +39,8 @@ less ~/laptop.log
 * Ruby
 * Python
 * Golang
+* pip
+* Powerline
 
 Downloading these packages:
 
