@@ -1,0 +1,130 @@
+#!/bin/bash
+
+# Welcome to the laptop script!
+# Be prepared to turn your laptop
+# into an awesome development machine.
+
+fancy_echo() {
+  local fmt="$1"; shift
+
+  # shellcheck disable=SC2059
+  printf "\\n$fmt\\n" "$@"
+}
+
+add_or_update_asdf_plugin() {
+  local name="$1"
+
+  if ! asdf plugin-list | grep -Fq "$name"; then
+    asdf plugin-add "$name"
+  else
+    asdf plugin-update "$name"
+  fi
+}
+
+install_asdf_language() {
+  local language="$1"
+  local version
+  version="$(asdf list-all "$language" | grep -v "[a-z]" | tail -1)"
+
+  if ! asdf list "$language" | grep -Fq "$version"; then
+    asdf install "$language" "$version"
+    asdf global "$language" "$version"
+  fi
+}
+
+fancy_echo "Installing Xcode command line tools ..."
+/usr/bin/xcode-select --install 2>/dev/null
+
+# shellcheck disable=SC2154
+trap 'ret=$?; test $ret -ne 0 && printf "failed\n\n" >&2; exit $ret' EXIT
+
+set -e
+
+fancy_echo "Clone dotfiles ..."
+if [ ! -d "${HOME}/dotfiles" ]; then
+  git clone https://github.com/kforsthoevel/dotfiles.git ~/dotfiles
+fi
+
+if ! command -v brew > /dev/null; then
+  fancy_echo "Installing Homebrew ..."
+    curl -fsS \
+      'https://raw.githubusercontent.com/Homebrew/install/master/install' | ruby
+fi
+
+if brew list | grep -Fq brew-cask; then
+  fancy_echo "Uninstalling old Homebrew-Cask ..."
+  brew uninstall --force brew-cask
+fi
+
+if [ -f "${HOME}/dotfiles/Brewfile" ]; then
+  fancy_echo "Updating Homebrew formulae ..."
+  brew update
+  brew bundle --file="${HOME}/dotfiles/Brewfile"
+fi
+
+# shellcheck disable=SC1091
+source /usr/local/opt/asdf/asdf.sh
+add_or_update_asdf_plugin "ruby"
+add_or_update_asdf_plugin "python"
+add_or_update_asdf_plugin "golang"
+add_or_update_asdf_plugin "kops"
+
+fancy_echo "Installing latest Ruby ..."
+install_asdf_language "ruby"
+
+fancy_echo "Installing latest Python ..."
+install_asdf_language "python"
+
+fancy_echo "Installing latest Go ..."
+install_asdf_language "golang"
+
+fancy_echo "Installing latest kops ..."
+install_asdf_language "kops"
+
+if ! command -v pip >/dev/null; then
+  curl -s -o get-pip.py https://bootstrap.pypa.io/get-pip.py
+  python get-pip.py && rm get-pip.py
+  asdf reshim
+fi
+
+if [ ! -f "${HOME}/.asdf/shims/powerline" ]; then
+  fancy_echo "Installing 'Powerline' ..."
+  pip install --user powerline-status
+fi
+
+if [ ! -f "${HOME}/Downloads/Hack-v3.003-ttf.zip" ]; then
+  fancy_echo "Downloading 'Hack font' ..."
+  curl -sL -o "${HOME}/Downloads/Hack-v3.003-ttf.zip" https://github.com/source-foundry/Hack/releases/download/v3.003/Hack-v3.003-ttf.zip
+fi
+
+if [ ! -f "${HOME}/Downloads/Docker.dmg" ]; then
+  fancy_echo "Downloading 'Docker' ..."
+  curl -sl -o "${HOME}/Downloads/Docker.dmg" https://download.docker.com/mac/stable/Docker.dmg
+fi
+
+if [ ! -f "${HOME}/Downloads/Firefox.dmg" ]; then
+  fancy_echo "Downloading 'Firefox' ..."
+  curl -sl -o "${HOME}/Downloads/Firefox.dmg" "https://download.mozilla.org/?product=firefox-latest-ssl&os=osx&lang=de"
+fi
+
+if [ ! -f "${HOME}/Downloads/googlechrome.dmg" ]; then
+  fancy_echo "Downloading 'Google Chrome' ..."
+  curl -sL -o "${HOME}/Downloads/googlechrome.dmg" "https://dl.google.com/chrome/mac/stable/GGRO/googlechrome.dmg"
+fi
+
+if [ ! -f "${HOME}/Downloads/Slack.dmg" ]; then
+  fancy_echo "Downloading 'Slack' ..."
+  curl -sL -o "${HOME}/Downloads/Slack.dmg" "https://slack.com/ssb/download-osx"
+fi
+
+if [ ! -f "${HOME}/Downloads/Keyabse.dmg" ]; then
+  fancy_echo "Downloading 'Keybase' ..."
+  curl -sL -o "${HOME}/Downloads/Keybase.dmg" "https://prerelease.keybase.io/Keybase.dmg"
+fi
+
+if [ ! -f "${HOME}/.rcrc" ]; then
+  fancy_echo "Updating dotfiles ..."
+  /usr/local/bin/rcup -d "${HOME}/dotfiles" -x README.md -x LICENSE -x Brewfile
+fi
+
+fancy_echo "All done. Have a nice day."
