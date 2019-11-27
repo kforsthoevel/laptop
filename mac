@@ -47,8 +47,7 @@ fi
 
 if ! command -v brew > /dev/null; then
   fancy_echo "Installing Homebrew ..."
-    curl -fsS \
-      'https://raw.githubusercontent.com/Homebrew/install/master/install' | ruby
+  /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 fi
 
 if brew list | grep -Fq brew-cask; then
@@ -92,6 +91,11 @@ if [ ! -f "${HOME}/.asdf/shims/powerline" ]; then
   pip install --user powerline-status
 fi
 
+if [ ! -f "${HOME}/Downloads/1Password.pkg" ]; then
+  fancy_echo "Downloading '1Password' ..."
+  curl -sL -o "${HOME}/Downloads/1Password.pkg" https://app-updates.agilebits.com/download/OPM7
+fi
+
 if [ ! -f "${HOME}/Downloads/Hack-v3.003-ttf.zip" ]; then
   fancy_echo "Downloading 'Hack font' ..."
   curl -sL -o "${HOME}/Downloads/Hack-v3.003-ttf.zip" https://github.com/source-foundry/Hack/releases/download/v3.003/Hack-v3.003-ttf.zip
@@ -99,12 +103,12 @@ fi
 
 if [ ! -f "${HOME}/Downloads/Docker.dmg" ]; then
   fancy_echo "Downloading 'Docker' ..."
-  curl -sl -o "${HOME}/Downloads/Docker.dmg" https://download.docker.com/mac/stable/Docker.dmg
+  curl -sL -o "${HOME}/Downloads/Docker.dmg" https://download.docker.com/mac/stable/Docker.dmg
 fi
 
 if [ ! -f "${HOME}/Downloads/Firefox.dmg" ]; then
   fancy_echo "Downloading 'Firefox' ..."
-  curl -sl -o "${HOME}/Downloads/Firefox.dmg" "https://download.mozilla.org/?product=firefox-latest-ssl&os=osx&lang=de"
+  curl -sL -o "${HOME}/Downloads/Firefox.dmg" "https://download.mozilla.org/?product=firefox-latest-ssl&os=osx&lang=de"
 fi
 
 if [ ! -f "${HOME}/Downloads/googlechrome.dmg" ]; then
