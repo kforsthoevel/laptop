@@ -35,6 +35,13 @@ install_asdf_language() {
 fancy_echo "Installing Xcode command line tools ..."
 /usr/bin/xcode-select --install 2>/dev/null
 
+printf "%s\n" "💡 ALT+TAB to view and accept Xcode license window."
+read -rp "Have you completed the Xcode CLI tools install (y/n)? " xcode_response
+if [[ "$xcode_response" != "y" ]]; then
+  printf "ERROR: Xcode CLI tools must be installed before proceeding.\n"
+  exit 1
+fi
+
 # shellcheck disable=SC2154
 trap 'ret=$?; test $ret -ne 0 && printf "failed\n\n" >&2; exit $ret' EXIT
 
@@ -83,12 +90,14 @@ install_asdf_language "kops"
 if ! command -v pip >/dev/null; then
   curl -s -o get-pip.py https://bootstrap.pypa.io/get-pip.py
   python get-pip.py && rm get-pip.py
+  pip install --upgrade pip
   asdf reshim
 fi
 
 if [ ! -f "${HOME}/.asdf/shims/powerline" ]; then
   fancy_echo "Installing 'Powerline' ..."
-  pip install --user powerline-status
+  pip install powerline-status
+  asdf reshim
 fi
 
 if [ ! -f "${HOME}/Downloads/1Password.pkg" ]; then
@@ -126,9 +135,17 @@ if [ ! -f "${HOME}/Downloads/Keyabse.dmg" ]; then
   curl -sL -o "${HOME}/Downloads/Keybase.dmg" "https://prerelease.keybase.io/Keybase.dmg"
 fi
 
+if [ ! -f "${HOME}/Downloads/GoogleDriveFileStream.dmg" ]; then
+  fancy_echo "Downloading 'Google Drive File Stream' ..."
+  curl -sL -o "${HOME}/Downloads/GoogleDriveFileStream.dmg" "https://dl.google.com/drive-file-stream/GoogleDriveFileStream.dmg"
+fi
+
 if [ ! -f "${HOME}/.rcrc" ]; then
   fancy_echo "Updating dotfiles ..."
   /usr/local/bin/rcup -d "${HOME}/dotfiles" -x README.md -x LICENSE -x Brewfile
 fi
+
+# Set highlight color to green
+defaults write NSGlobalDomain AppleHighlightColor -string "0.752941 0.964706 0.678431 Green"
 
 fancy_echo "All done. Have a nice day."
