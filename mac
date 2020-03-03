@@ -24,12 +24,19 @@ add_or_update_asdf_plugin() {
 install_asdf_language() {
   local language="$1"
   local version
-  version="$(asdf list-all "$language" | grep -v "[a-z]" | tail -1)"
+  version="$(asdf list-all "$language" | grep -E "^v?[0-9][^(a-z)]*$" | tail -1)"
 
   if ! asdf list "$language" | grep -Fq "$version"; then
     asdf install "$language" "$version"
     asdf global "$language" "$version"
   fi
+}
+
+install_or_upgrade_pip() {
+  local name="$1"
+  fancy_echo "Updating ${name}"
+  pip install --upgrade --quiet "$name"
+  asdf reshim
 }
 
 fancy_echo "Installing Xcode command line tools ..."
@@ -94,11 +101,8 @@ if ! command -v pip >/dev/null; then
   asdf reshim
 fi
 
-if [ ! -f "${HOME}/.asdf/shims/powerline" ]; then
-  fancy_echo "Installing 'Powerline' ..."
-  pip install powerline-status
-  asdf reshim
-fi
+install_or_upgrade_pip "powerline-status"
+install_or_upgrade_pip "ec2instanceconnectcli"
 
 if [ ! -f "${HOME}/Downloads/1Password.pkg" ]; then
   fancy_echo "Downloading '1Password' ..."
