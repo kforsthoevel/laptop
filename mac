@@ -104,6 +104,11 @@ fi
 install_or_upgrade_pip "powerline-status"
 install_or_upgrade_pip "ec2instanceconnectcli"
 
+if [ ! -f "${HOME}/.zsh_plugins.sh" ]; then
+  fancy_echo "Installing zsh plugins ..."
+  /usr/local/bin/antibody bundle < "${HOME}/.zsh_plugins.txt" > "${HOME}/.zsh_plugins.sh"
+fi
+
 if [ ! -f "${HOME}/Downloads/1Password.pkg" ]; then
   fancy_echo "Downloading '1Password' ..."
   curl -sL -o "${HOME}/Downloads/1Password.pkg" https://app-updates.agilebits.com/download/OPM7
