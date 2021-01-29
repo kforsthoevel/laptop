@@ -104,9 +104,21 @@ fi
 install_or_upgrade_pip "powerline-status"
 install_or_upgrade_pip "ec2instanceconnectcli"
 
+if [ ! -f "${HOME}/.rcrc" ]; then
+  fancy_echo "Updating dotfiles ..."
+  /usr/local/bin/rcup -d "${HOME}/dotfiles" -x README.md -x LICENSE -x Brewfile
+fi
+
 if [ ! -f "${HOME}/.zsh_plugins.sh" ]; then
   fancy_echo "Installing zsh plugins ..."
   /usr/local/bin/antibody bundle < "${HOME}/.zsh_plugins.txt" > "${HOME}/.zsh_plugins.sh"
+fi
+
+if [ ! -f "${HOME/.terminfo}" ]; then
+  fancy_echo "Configure zsh to support italic fonts"
+  mkdir -p "${HOME}/.terminfo/73" "${HOME}/.terminfo/78"
+  curl -o "${HOME}/.terminfo/73/screen-256color" https://raw.githubusercontent.com/kforsthoevel/laptop/master/screen-256color
+  curl -o "${HOME}/.terminfo/78/xterm-256color" https://raw.githubusercontent.com/kforsthoevel/laptop/master/xterm-256color
 fi
 
 if [ ! -f "${HOME}/Downloads/1Password.pkg" ]; then
@@ -147,11 +159,6 @@ fi
 if [ ! -f "${HOME}/Downloads/GoogleDriveFileStream.dmg" ]; then
   fancy_echo "Downloading 'Google Drive File Stream' ..."
   curl -sL -o "${HOME}/Downloads/GoogleDriveFileStream.dmg" "https://dl.google.com/drive-file-stream/GoogleDriveFileStream.dmg"
-fi
-
-if [ ! -f "${HOME}/.rcrc" ]; then
-  fancy_echo "Updating dotfiles ..."
-  /usr/local/bin/rcup -d "${HOME}/dotfiles" -x README.md -x LICENSE -x Brewfile
 fi
 
 # Set highlight color to green
