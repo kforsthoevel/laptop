@@ -163,5 +163,7 @@ fi
 
 # Set highlight color to green
 defaults write NSGlobalDomain AppleHighlightColor -string "0.752941 0.964706 0.678431 Green"
+defaults write NSGlobalDomain AppleAccentColor -int 3
+defaults write NSGlobalDomain AppleInterfaceStyle  -string "Dark"
 
 fancy_echo "All done. Have a nice day."
