@@ -4,6 +4,15 @@
 # Be prepared to turn your laptop
 # into an awesome development machine.
 
+ARCH=$(uname -m)
+
+if [[ ${ARCH} == "arm64" ]]; then
+  BREW_PATH="/opt/homebrew"
+else
+  BREW_PATH="/usr/local"
+fi
+BREW_BIN_PATH="${BREW_PATH}/bin"
+
 fancy_echo() {
   local fmt="$1"; shift
 
@@ -14,29 +23,29 @@ fancy_echo() {
 add_or_update_asdf_plugin() {
   local name="$1"
 
-  if ! asdf plugin-list | grep -Fq "$name"; then
-    asdf plugin-add "$name"
+  if ! ${BREW_BIN_PATH}/asdf plugin-list | grep -Fq "$name"; then
+    ${BREW_BIN_PATH}/asdf plugin-add "$name"
   else
-    asdf plugin-update "$name"
+    ${BREW_BIN_PATH}/asdf plugin-update "$name"
   fi
 }
 
 install_asdf_language() {
   local language="$1"
   local version
-  version="$(asdf list-all "$language" | grep -E "^v?[0-9][^(a-z)]*$" | tail -1)"
+  version="$(${BREW_BIN_PATH}/asdf list-all "$language" | grep -E "^v?[0-9][^(a-z)]*$" | tail -1)"
 
-  if ! asdf list "$language" | grep -Fq "$version"; then
-    asdf install "$language" "$version"
-    asdf global "$language" "$version"
+  if ! ${BREW_BIN_PATH}/asdf list "$language" | grep -Fq "$version"; then
+    ${BREW_BIN_PATH}/asdf install "$language" "$version"
+    ${BREW_BIN_PATH}/asdf global "$language" "$version"
   fi
 }
 
 install_or_upgrade_pip() {
   local name="$1"
   fancy_echo "Updating ${name}"
-  pip install --upgrade --quiet "$name"
-  asdf reshim
+  "${HOME}/.asdf/shims/pip" install --upgrade --quiet "$name"
+  ${BREW_BIN_PATH}/asdf reshim
 }
 
 fancy_echo "Installing Xcode command line tools ..."
@@ -52,35 +61,47 @@ fi
 # shellcheck disable=SC2154
 trap 'ret=$?; test $ret -ne 0 && printf "failed\n\n" >&2; exit $ret' EXIT
 
+if [[ "$ARCH" == "arm64" ]]; then
+  fancy_echo "Installing Rosetta 2 Framework ..."
+  /usr/sbin/softwareupdate --install-rosetta --agree-to-license 2>/dev/null
+
+  read -rp "Have you completed the Rosetta 2 installation (y/n)? " rosetta_response
+  if [[ "$rosetta_response" != "y" ]]; then
+    printf "ERROR: Rosetta must be installed before proceeding.\n"
+    exit 1
+  fi
+
+  # shellcheck disable=SC2154
+  trap 'ret=$?; test $ret -ne 0 && printf "failed\n\n" >&2; exit $ret' EXIT
+fi
+
 set -e
 
-fancy_echo "Clone dotfiles ..."
 if [ ! -d "${HOME}/dotfiles" ]; then
+  fancy_echo "Clone dotfiles ..."
   git clone https://github.com/kforsthoevel/dotfiles.git ~/dotfiles
 fi
 
-if ! command -v brew > /dev/null; then
+if ! command -v ${BREW_BIN_PATH}/brew > /dev/null; then
   fancy_echo "Installing Homebrew ..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
-if brew list --formula | grep -Fq brew-cask; then
+if ${BREW_BIN_PATH}/brew list --formula | grep -Fq brew-cask; then
   fancy_echo "Uninstalling old Homebrew-Cask ..."
-  brew uninstall --force brew-cask
+  ${BREW_BIN_PATH}/brew uninstall --force brew-cask
 fi
 
 if [ -f "${HOME}/dotfiles/Brewfile" ]; then
   fancy_echo "Updating Homebrew formulae ..."
-  brew update
-  brew bundle --file="${HOME}/dotfiles/Brewfile"
+  ${BREW_BIN_PATH}/brew update
+  ${BREW_BIN_PATH}/brew bundle --file="${HOME}/dotfiles/Brewfile"
 fi
 
 # shellcheck disable=SC1091
-source /usr/local/opt/asdf/asdf.sh
+source ${BREW_PATH}/opt/asdf/asdf.sh
 add_or_update_asdf_plugin "ruby"
 add_or_update_asdf_plugin "python"
-add_or_update_asdf_plugin "golang"
-add_or_update_asdf_plugin "kops"
 
 fancy_echo "Installing latest Ruby ..."
 install_asdf_language "ruby"
@@ -88,19 +109,13 @@ install_asdf_language "ruby"
 fancy_echo "Installing latest Python ..."
 install_asdf_language "python"
 
-fancy_echo "Installing latest Go ..."
-install_asdf_language "golang"
-
-fancy_echo "Installing latest kops ..."
-install_asdf_language "kops"
-
-asdf reshim
+${BREW_BIN_PATH}/asdf reshim
 
 if ! command -v pip >/dev/null; then
   curl -s -o get-pip.py https://bootstrap.pypa.io/get-pip.py
-  python get-pip.py && rm get-pip.py
-  pip install --upgrade pip
-  asdf reshim
+  "${HOME}/.asdf/shims/python" get-pip.py && rm get-pip.py
+  "${HOME}/.asdf/shims/pip" install --upgrade pip
+  ${BREW_BIN_PATH}/asdf reshim
 fi
 
 install_or_upgrade_pip "powerline-status"
@@ -108,19 +123,14 @@ install_or_upgrade_pip "ec2instanceconnectcli"
 
 if [ ! -f "${HOME}/.rcrc" ]; then
   fancy_echo "Updating dotfiles ..."
-  /usr/local/bin/rcup -d "${HOME}/dotfiles" -x README.md -x LICENSE -x Brewfile
-fi
-
-if [ ! -f "${HOME}/.zsh_plugins.sh" ]; then
-  fancy_echo "Installing zsh plugins ..."
-  /usr/local/bin/antibody bundle < "${HOME}/.zsh_plugins.txt" > "${HOME}/.zsh_plugins.sh"
+  ${BREW_BIN_PATH}/rcup -d "${HOME}/dotfiles" -x README.md -x LICENSE -x Brewfile
 fi
 
 if [ ! -f "${HOME/.terminfo}" ]; then
   fancy_echo "Configure zsh to support italic fonts"
   mkdir -p "${HOME}/.terminfo/73" "${HOME}/.terminfo/78"
-  curl -o "${HOME}/.terminfo/73/screen-256color" https://raw.githubusercontent.com/kforsthoevel/laptop/master/screen-256color
-  curl -o "${HOME}/.terminfo/78/xterm-256color" https://raw.githubusercontent.com/kforsthoevel/laptop/master/xterm-256color
+  curl -sL -o "${HOME}/.terminfo/73/screen-256color" https://raw.githubusercontent.com/kforsthoevel/laptop/master/screen-256color
+  curl -sL -o "${HOME}/.terminfo/78/xterm-256color" https://raw.githubusercontent.com/kforsthoevel/laptop/master/xterm-256color
 fi
 
 if [ ! -f "${HOME}/Downloads/1Password.pkg" ]; then
@@ -128,14 +138,13 @@ if [ ! -f "${HOME}/Downloads/1Password.pkg" ]; then
   curl -sL -o "${HOME}/Downloads/1Password.pkg" https://app-updates.agilebits.com/download/OPM7
 fi
 
-if [ ! -f "${HOME}/Downloads/Hack-v3.003-ttf.zip" ]; then
-  fancy_echo "Downloading 'Hack font' ..."
-  curl -sL -o "${HOME}/Downloads/Hack-v3.003-ttf.zip" https://github.com/source-foundry/Hack/releases/download/v3.003/Hack-v3.003-ttf.zip
-fi
-
 if [ ! -f "${HOME}/Downloads/Docker.dmg" ]; then
   fancy_echo "Downloading 'Docker' ..."
-  curl -sL -o "${HOME}/Downloads/Docker.dmg" https://download.docker.com/mac/stable/Docker.dmg
+  if [[ ${ARCH} == "arm64" ]]; then
+    curl -sL -o "${HOME}/Downloads/Docker.dmg" https://desktop.docker.com/mac/main/arm64/Docker.dmg
+  else
+    curl -sL -o "${HOME}/Downloads/Docker.dmg" https://desktop.docker.com/mac/main/amd64/Docker.dmg
+  fi
 fi
 
 if [ ! -f "${HOME}/Downloads/Firefox.dmg" ]; then
@@ -153,7 +162,7 @@ if [ ! -f "${HOME}/Downloads/Slack.dmg" ]; then
   curl -sL -o "${HOME}/Downloads/Slack.dmg" "https://slack.com/ssb/download-osx"
 fi
 
-if [ ! -f "${HOME}/Downloads/Keyabse.dmg" ]; then
+if [ ! -f "${HOME}/Downloads/Keybase.dmg" ]; then
   fancy_echo "Downloading 'Keybase' ..."
   curl -sL -o "${HOME}/Downloads/Keybase.dmg" "https://prerelease.keybase.io/Keybase.dmg"
 fi
@@ -166,6 +175,6 @@ fi
 # Set highlight color to green
 defaults write NSGlobalDomain AppleHighlightColor -string "0.752941 0.964706 0.678431 Green"
 defaults write NSGlobalDomain AppleAccentColor -int 3
-defaults write NSGlobalDomain AppleInterfaceStyle  -string "Dark"
+defaults write NSGlobalDomain AppleInterfaceStyle  -string "Light"
 
 fancy_echo "All done. Have a nice day."
